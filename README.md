@@ -4,6 +4,10 @@
 This code uses ensemble and imbalance learning approaches to improve identifying short-survival amyotrophic lateral sclerosis patients at diagnosis time. Furthermore, we utilized the SHAP framework to explain how the best model performed the patient classifications.  
 The results of this work have been published in the research article "Ensemble-Imbalance-based classification for amyotrophic lateral sclerosis prognostic prediction: identifying short-survival patients at diagnosis" (Papaiz et al., 2023).
 
+** If you use this code for your research please cite this paper: **
+
+> Papaiz F, Dourado MET, Valentim RAdM, de Morais AHF, Arrais JP. Ensemble-Imbalance-based classification for amyotrophic lateral sclerosis prognostic prediction: identifying short-survival patients at diagnosis. 2023.
+   
 [LICENSE](LICENSE)
 
 ---
@@ -39,8 +43,15 @@ For those wanting to try it out, this is what you need:
         - Train and validate the ML models for both scenarios (_Single-Model_ and _Ensemble-Imbalance_)
            - NOTE: It can take a long time to accomplish (even days) because more than 30,000 models will be executed.
         - Save the performance results into CSV files in the `05_Train_Validate_Models/exec_results` folder
+    - Pipeline Overview:
+       ![ml_pipeline](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/assets/16102250/c7188c16-56a8-4dc3-acf2-ac8d5b94f406)
 
-6) Execute the SHAP explanations over the model that reached the best performance for the _Ensemble-Imbalance_ scenario(i.e., _BalancedBagging_ model using _Neural Networks_ as a base estimator)
+
+6) Results: Validation performance obtained by scenario and algorithm:
+    ![performances_both_scenarios](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/assets/16102250/9723eb3b-4869-4379-a9d0-c8dacd58f778)
+
+ 
+7) Execute the SHAP explanations over the model that reached the best performance for the _Ensemble-Imbalance_ scenario(i.e., _BalancedBagging_ model using _Neural Networks_ as a base estimator)
     - Create a SHAP Kernel Explainer instance using the best model and the Validation set:
         - ```explainer = shap.KernelExplainer(<<BEST_MODEL>>.predict, X_valid) ```
     - Generate the SHAP values: (Note: It can take many hours)
@@ -55,6 +66,4 @@ For those wanting to try it out, this is what you need:
 ---
 Finally, please let us know if you have any comments or suggestions, or if you have questions about the code or the procedure (correspondence e-mail: `fabianopapaiz at gmail.com`). 
 
-** If you use this code for your research please cite this paper: **
 
-1) Papaiz F, Dourado MET, Valentim RAdM, de Morais AHF, Arrais JP. Ensemble-Imbalance-based classification for amyotrophic lateral sclerosis prognostic prediction: identifying short-survival patients at diagnosis. npj Digital Medicine. 2023. 
