@@ -10,7 +10,7 @@ The results of this work have been published in the research article "Ensemble-I
 ---
 
 
-** If you use this code for your research please cite this paper: **
+**If you use this code for your research please cite this paper:**
 
 > Papaiz F, Dourado MET, Valentim RAdM, de Morais AHF, Arrais JP. Ensemble-Imbalance-based classification for amyotrophic lateral sclerosis prognostic prediction: identifying short-survival patients at diagnosis. 2023.
    
