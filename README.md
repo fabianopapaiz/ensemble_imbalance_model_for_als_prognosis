@@ -43,15 +43,20 @@ For those wanting to try it out, this is what you need:
         - Train and validate the ML models for both scenarios (_Single-Model_ and _Ensemble-Imbalance_)
            - NOTE: It can take a long time to accomplish (even days) because more than 30,000 models will be executed.
         - Save the performance results into CSV files in the `05_Train_Validate_Models/exec_results` folder
+           - Result CSV files:
+              - ```results_Ensemble_Imbalance.csv```: training performances for the _Ensemble-Imbalance_ scenario.
+              - ```results_Single_Model.csv```: training performances for the _Single-Model_ scenario.
+              - ```validation_results.csv```: validation performances for the both scenarios.
+             
     - Pipeline Overview:
        ![ml_pipeline](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/assets/16102250/c7188c16-56a8-4dc3-acf2-ac8d5b94f406)
 
 
-6) Results: Validation performance obtained by scenario and algorithm:
-    ![performances_both_scenarios](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/assets/16102250/9723eb3b-4869-4379-a9d0-c8dacd58f778)
+    - Validation performance obtained by each scenario and algorithm:
+       ![performances_both_scenarios](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/assets/16102250/9723eb3b-4869-4379-a9d0-c8dacd58f778)
 
  
-7) Execute the SHAP explanations over the model that reached the best performance for the _Ensemble-Imbalance_ scenario(i.e., _BalancedBagging_ model using _Neural Networks_ as a base estimator)
+6) Execute the SHAP explanations over the model that reached the best performance for the _Ensemble-Imbalance_ scenario(i.e., _BalancedBagging_ model using _Neural Networks_ as a base estimator)
     - Create a SHAP Kernel Explainer instance using the best model and the Validation set:
         - ```explainer = shap.KernelExplainer(<<BEST_MODEL>>.predict, X_valid) ```
     - Generate the SHAP values: (Note: It can take many hours)
