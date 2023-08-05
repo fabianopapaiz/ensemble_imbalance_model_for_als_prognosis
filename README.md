@@ -59,7 +59,9 @@ For those wanting to try it out, this is what you need:
 
 
     - Validation performance obtained by each scenario and algorithm:
-       ![performances_both_scenarios](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/assets/16102250/9723eb3b-4869-4379-a9d0-c8dacd58f778)
+      ![performances_both_scenarios](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/assets/16102250/78fa083d-cc95-437e-8d8a-301acc434417)
+
+
 
  
 6) Execute the SHAP explanations over the model that reached the best performance for the _Ensemble-Imbalance_ scenario(i.e., _BalancedBagging_ model using _Neural Networks_ as a base estimator)
