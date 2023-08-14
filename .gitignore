@@ -1,2 +1,5 @@
 
 .DS_Store
+05_Train_Validate_Models/99.01 - Tests.ipynb
+05_Train_Validate_Models/.ipynb_checkpoints/99.01 - Tests-checkpoint.ipynb
+*.pyc
