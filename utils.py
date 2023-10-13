@@ -1,5 +1,6 @@
 import math
 import os
+import string
 
 import numpy as np
 import pandas as pd
@@ -11,6 +12,7 @@ from matplotlib.ticker import PercentFormatter
 from datetime import datetime
 from datetime import timedelta
 from dateutil import relativedelta
+
 
 
 
@@ -67,7 +69,12 @@ def get_inputs_and_output_variables(df):
     return X, y
 
 
-def get_train_and_validation_data(dir_data=None, scaled=False, coded=False):
+# get "n" first colors for a given palette
+def get_n_colors(n, palette='colorblind'):
+    return sns.color_palette(palette, n)
+
+
+def get_train_and_validation_data(dir_data=None, scaled=False, coded=False, use_diagnosis_delay=True):
 
     if dir_data is None:
         dir_data = os.path.abspath('training_validation_data/')
@@ -86,6 +93,12 @@ def get_train_and_validation_data(dir_data=None, scaled=False, coded=False):
     # Validation set
     df_validation = read_csv(f'{dir_data}/validation_data{suffix}.csv')
     X_valid, y_valid = get_inputs_and_output_variables(df_validation)
+
+
+    # drop Diagnosis_Delay column, if needed
+    if not use_diagnosis_delay:
+        X_train.drop(columns=['Diagnosis_Delay'], inplace=True)
+        X_valid.drop(columns=['Diagnosis_Delay'], inplace=True)
 
 
     # X_all = pd.concat([X_train, X_valid])
@@ -262,6 +275,23 @@ def get_coded_fvc_to_string(code, add_coded_value=False):
 
     return text
 
+
+
+def set_feature_values_order(x):
+
+    x = x.replace('Short', '(0) Short')
+    x = x.replace('Average', '(1) Average')
+    x = x.replace('Long', '(2) Long')
+
+    x = x.replace('Slow', '(0) Slow')
+    x = x.replace('Rapid', '(2) Rapid')
+
+    x = x.replace('Underweight', '(0) Underweight')
+    x = x.replace('Normal', '(1) Normal')
+    x = x.replace('Overweight', '(2) Overweight')
+    x = x.replace('Obesity', '(3) Obesity')
+
+    return x
 
 
 def get_coded_diagnosis_delay_to_string(code, scaled=False, add_coded_value=False):
@@ -1351,7 +1381,9 @@ def create_data_frame_from_two_groups(series_1, series_2, title_group_1='Group-1
 
 
 def get_model_description(model_desc):
-    
+
+    model_desc = str(model_desc).replace('()', '')   
+
     NB_models = [
         'ComplementNB', 
         'GaussianNB', 
@@ -1361,22 +1393,27 @@ def get_model_description(model_desc):
     ]
 
     KNN_models = [
+        'RadiusNeighbors', 
         'RadiusNeighborsClassifier', 
+        'KNeighbors',
         'KNeighborsClassifier',
         'k-NN', 
     ]
 
     NN_models = [
+        'MLP',
         'MLPClassifier',
         'NN',
     ]
 
     RF_models = [
+        'RandomForest',
         'RandomForestClassifier',
         'RF', 
     ]
 
     DT_models = [
+        'DecisionTree',
         'DecisionTreeClassifier',
         'DT', 
     ]
@@ -1397,7 +1434,14 @@ def get_model_description(model_desc):
 
     BalancedBagging_models = [
         'BalancedBaggingClassifier',
-        'Bal. Bagging'
+        'Bal. Bagging',
+        'BalBagging',
+    ]
+
+    BalancedRF_models = [
+        'BalancedRandomForestClassifier',
+        'Bal. RF',
+        'BalRF',
     ]
 
     if model_desc in NB_models:
@@ -1418,12 +1462,16 @@ def get_model_description(model_desc):
         return 'CatBoost'
     elif model_desc in BalancedBagging_models:
         return 'Balanced Bagging'
+    elif model_desc in BalancedRF_models:
+        return 'Balanced Random Forest'
     else:
-        return model_desc
+        return model_desc.replace('Classifier', '')
 
 
 
 def get_model_short_description(model_desc):
+
+    model_desc = str(model_desc).replace('()', '')   
     
     NB_models = [
         'ComplementNB', 
@@ -1458,6 +1506,11 @@ def get_model_short_description(model_desc):
         'BalancedBaggingClassifier',
     ]
 
+    BalancedRF_models = [
+        'BalancedRandomForestClassifier',
+        'Balanced Random Forest'
+    ]
+
     if model_desc in NB_models:
         return 'NB'
     elif model_desc in KNN_models:
@@ -1470,8 +1523,10 @@ def get_model_short_description(model_desc):
         return 'DT'
     elif model_desc in BalancedBagging_models:
         return 'Bal. Bagging'
+    elif model_desc in BalancedRF_models:
+        return 'Bal. RF'
     else:
-        return model_desc
+        return model_desc.replace('Classifier', '')
 
 
 
@@ -1581,3 +1636,325 @@ def save_plot(plt, folder, file_name, dpi=300, bbox_inches='tight', save_in_pdf_
             bbox_inches=bbox_inches, 
             dpi=dpi
         )
+
+
+
+
+### Display a 'Non-Short' and 'Short' on xticks to show in SHAP Decision Plot
+def customize_xticks(ax, fontweight='bold', fontsize=10):
+    xticks_modified = []
+    
+    # print('xticks values:', ax.get_xticks())
+
+    for val in ax.get_xticks():
+        xticks_modified.append('')
+        # if val == 0.0:
+        #     xticks_modified.append('Non-Short')
+        # else:
+        #     xticks_modified.append('')
+
+    # xticks_modified[-1] = 'Short'        
+            
+
+    xticks_modified[1] = 'Non-Short'        
+    xticks_modified[-1] = 'Short'        
+
+    # print('xticks modif.:', xticks_modified)
+
+    ax.set_xticks(ax.get_xticks(), xticks_modified, fontweight=fontweight, fontsize=fontsize)
+
+
+def plot_shap_values_by_feature_in_one_graph(data_frames, features_ordered_names, 
+                                            x_min, x_max, folder_to_save,
+                                            file_name='SHAP_by_feature_values', 
+                                            figsize=[5,2], bar_height = 0.1, 
+                                            midline_decimal_point=False, 
+                                            qty_features=14):
+
+    dfs = data_frames.copy()
+
+    # print(len(dfs))
+
+    # rows = int(np.ceil(qty_features/2))
+    # cols = 2
+    # print(rows, cols)
+    rows = 3
+    cols = 4
+
+
+    fig, axes = plt.subplots(
+        rows, 
+        cols, 
+        figsize=figsize, 
+        layout='constrained',
+        # gridspec_kw={'height_ratios': [0.7, 0.7, 0.7, 0.7, 0.7]},
+        # sharex=True, 
+        # sharey=True    
+    )
+
+    # fig5 = plt.figure(constrained_layout=True)
+    # widths = [2, 3, 1.5]
+    # heights = [1, 3, 2]
+    # spec5 = fig5.add_gridspec(ncols=3, nrows=3, width_ratios=widths,
+    #                         height_ratios=heights)
+
+    axes = axes.flatten()
+
+    # print(axes[0], axes[1])
+
+    alphabet = list(string.ascii_lowercase)  
+
+    ranking = ['st', 'nd', 'rd', 'th']
+
+
+    i_axes = 0
+    i = 0
+    for feat_ordered in features_ordered_names:
+
+        if i == qty_features:
+            break
+
+        # print(f'FEAT_ORDERED: {feat_ordered}')
+
+        # PLOT THE GRAPHS ordered inversed by mean SHAP value
+        for feat, qty_values, df in dfs:    
+            
+            # print(f'    FEAT: {feat}')
+            
+            # print(feat, df.columns)
+
+            if (feat == feat_ordered):
+                i+=1
+
+                if feat == 'Diagnosis_Delay': 
+                    df['order'] = df['Feature Values']
+                    df.order = df.order.replace({'Long': 3, 'Average': 2, 'Short': 1})
+                    df.sort_values(by=['order'], inplace=True)
+
+
+                feature_name = f'#{i}: {feat}'
+                # rank = ranking[i-1] if i <= 3 else ranking[3]
+                # feature_name = r'%s$^{%s}$ %s'%(i, rank, feat   )
+
+                # print(f'         plotting {feat}')
+
+                ax = axes[i_axes]
+
+                plot_shap_values_by_feature(
+                        data=df, 
+                        title=f'{feat}', 
+                        # figsize=[6,(qty_values / 2)],
+                        bar_height=bar_height,
+                        x_min=x_min,
+                        x_max=x_max,
+                        feature_name=feature_name,
+                        midline_decimal_point=False,
+                        folder_to_save=None,
+                        axis=ax,
+                        idx_axis=i_axes+1,
+                    )
+                
+
+
+                ax.set_title(f'\n\n{feature_name}',fontweight='bold',fontsize=10)
+
+                # current_row = int((i_axes/2)+0.6)
+                current_row = int((i_axes/4))
+                print(i_axes, current_row, rows)
+                # if (current_row == rows) or (i_axes == len(axes)-2):
+                if (current_row == rows-1) or (i_axes >= 6):
+                    ax.set_xticks([x_min, (x_min*0.7), 0, (x_max*0.7), x_max], labels=[0,1,2,3,4],
+                        fontweight='bold',
+                        fontsize=8
+                    )
+                    ax.set_xticklabels([' ', '$\longleftarrow$ Non-Short', 0, 'Short $\longrightarrow$', ' ' ])
+
+
+                i_axes += 1
+
+                break
+    
+    axes[10].set_axis_off()
+    axes[11].set_axis_off()
+
+
+    plt.tight_layout()
+
+
+    if folder_to_save is not None:
+        save_plot(
+            plt=plt, 
+            folder=folder_to_save, 
+            file_name=file_name, 
+            save_in_pdf_format=True,
+        )
+
+
+    plt.show()
+    plt.close()
+
+
+def plot_shap_values_by_feature(data, title, x_min, x_max, feature_name, folder_to_save,
+                                figsize=[5,2], bar_height = 0.1, midline_decimal_point=False, axis=None, idx_axis=None):
+    
+    
+    # set colors according to positive and negatives values
+    colors = ['red' if x >= 0 else 'blue' for x in data[data.columns[1]].values]
+    
+    if axis is None:
+        plt.figure(figsize=figsize)
+        ax = sns.barplot(
+            data=data, 
+            x=data.columns[1], 
+            y=data.columns[0],
+            palette=colors # sns.color_palette("colorblind"),
+        )
+    else:
+        ax = sns.barplot(
+            data=data, 
+            ax=axis,
+            x=data.columns[1], 
+            y=data.columns[0],
+            palette=colors # sns.color_palette("colorblind"),
+        )
+
+      
+    # annotate the bars with their values
+    for p in ax.patches:
+        
+        x_offset = p.get_width() if p.get_width() > 0 else 0 
+        
+        # REPLACE "DECIMAL POINT" TO "MIDLINE DECIMAL POINT"
+        val = f'{p.get_width():.3f}'
+        if midline_decimal_point:
+            val = val.replace('.', '·')
+        
+        
+        ax.annotate(
+            val, 
+            xy=(
+                x_offset, 
+                p.get_y()+p.get_height()/2
+            ),
+            xytext=(5, 0), 
+            textcoords='offset points', 
+            ha="left", 
+            va="center",
+            size= 10 if axis is None else 8,
+        )    
+
+        # adjust bar width (or height)
+        diff = p.get_height() - bar_height
+
+        # we change the bar width
+        p.set_height(bar_height)
+
+        # we recenter the bar
+        p.set_y(p.get_y() + diff * 0.5)    
+        
+    
+    mult = 1.5
+    x_min = np.round(x_min * 1.05, 3)
+    x_max = np.round(x_max * 1.3, 3)
+    
+
+    ax.set_xlabel('')
+    
+    ax.grid(False)
+
+    ax.spines[['right', 'top']].set_visible(False)
+
+
+    # plotting only 1 graph
+    if axis is None:
+        plt.xlim(x_min, x_max)
+        plt.xticks([x_min, (x_min*0.7), 0, (x_max*0.7), x_max], 
+                fontweight='bold',
+                fontsize=10)
+    
+        plt.axvline(x=0.0, color='#666666', lw=1, ls='--')
+
+        ax.set_xticklabels([' ', '$\longleftarrow$ Non-Short', 0, 'Short $\longrightarrow$', ' ' ])
+
+        ax.set_ylabel(ax.get_ylabel(), fontsize=10)
+        plt.yticks(fontsize=10)
+
+    # ploting using subplots
+    else:
+        ax.axvline(x=0.0, color='#666666', lw=1, ls='--')
+        ax.set_xlim(x_min, x_max)
+        
+        ax.set_ylabel(ax.get_ylabel(),
+                fontweight='bold',
+                fontsize=8)
+
+        ax.set_xticks([])
+
+        ax.set_yticks(ticks=ax.get_yticks(), labels=ax.get_yticklabels(),
+                fontweight='bold',
+                fontsize=8)
+        
+        # if idx_axis%2 == 0:
+        print(idx_axis)
+        if idx_axis not in [1,5,9]:
+            ax.set_ylabel('', fontsize=10)
+
+
+        
+    
+    if folder_to_save is not None:
+        file_name = f'SHAP_by_feature_values_{feature_name}' 
+        save_plot(
+            plt=plt, 
+            folder=folder_to_save, 
+            file_name=file_name, 
+            save_in_pdf_format=True,
+        )
+
+
+    if axis is None:
+        plt.show()
+        plt.close()
+
+
+
+
+# annotate the bars of a graph with their values
+def annotate_barplot(ax, horizontal=True, bar_height=0.8, midline_decimal_point=False, font_size=9,
+                     deslocate=0.0, color='black', weight='normal'):
+
+    for p in ax.patches:
+        
+        x_offset = p.get_width() if p.get_width() > 0 else 0 
+
+        # REPLACE "DECIMAL POINT" TO "MIDLINE DECIMAL POINT"
+        val = f'{p.get_width():.3f}'
+        if midline_decimal_point:
+            val = val.replace('.', '·')
+        
+        
+        ax.annotate(
+            val, 
+            xy=(
+                x_offset, 
+                (p.get_y()+p.get_height()/2) + deslocate
+            ),
+            xytext=(5, 0), 
+            textcoords='offset points', 
+            ha="left", 
+            va="center",
+            size=font_size,
+            color=color,
+            weight=weight,
+        )    
+
+        # adjust bar width (or height)
+        diff = p.get_height() - bar_height
+
+        # we change the bar width
+        p.set_height(bar_height)
+
+        # we recenter the bar
+        p.set_y(p.get_y() + diff * 0.5)    
+
+

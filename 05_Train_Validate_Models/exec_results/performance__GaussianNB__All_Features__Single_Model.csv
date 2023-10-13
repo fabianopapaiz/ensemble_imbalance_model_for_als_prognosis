@@ -1,0 +1,2 @@
+Scenario,Features,Model,balanced_accuracy,sensitivity,specificity,f1_score,AUC,accuracy,precision,Model_Class,Hyperparams,Estimator,Estimator_Class,Estimator_Hyperparams,fit_time,train_balanced_accuracy,train_sensitivity,train_specificity,train_f1_score,train_AUC,train_accuracy,train_precision
+Single_Model,All_Features,Naïve Bayes,0.8,0.74,0.86,0.53,0.9,0.84,0.41,GaussianNB,{},,,,0.01,0.78,0.68,0.89,0.56,0.88,0.86,0.47

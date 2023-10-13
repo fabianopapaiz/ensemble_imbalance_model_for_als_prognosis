@@ -32,7 +32,11 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import BoundaryNorm, ListedColormap
 
 import seaborn as sns
-plt.style.use('seaborn-whitegrid')
+try:
+    plt.style.use('seaborn-whitegrid')
+except:
+    plt.style.use('seaborn-v0_8-whitegrid')
+        
 
 # import plotly as ply
 # import plotly.express as px
@@ -61,59 +65,85 @@ def sort_performances_results(df, cols_order_to_sort=['BalAcc', 'Sens', 'Spec'],
 
 
 ## get all performances for the models in the GridSearch
-def get_grid_search_performances(grid_search, 
-            dataset_info, features_info,
+def get_grid_search_performances(grid_search=None, performances=None, 
+            dataset_info='', features_info='',
             sort_results=True):
-    
-    classifiers = grid_search.cv_results_['params']
 
-    # get the models and hyperparameters
-    models = []
-    hyperparams = []
-    for classif_dict in classifiers:
-        dict_params = {}
-        for key, value in classif_dict.items():
-            if key == 'classifier':
-                clf = value    
-            else:
-                # correct the param name
-                new_key = key.replace('classifier__', '')
-                dict_params[new_key] = value    
 
-        model = clf.__class__.__name__
-        params = str(dict_params)
-
-        models.append(model)
-        hyperparams.append(params)
-
-    # get the performances
-    dict_results = {}
-    for key, value in grid_search.cv_results_.items():
-        # get mean_test performances
-        if key.startswith('mean_test_'):
-            new_key = key.replace('mean_test_', '')
-            dict_results[new_key] = list(value)
-        
-    bal_accs = np.round(dict_results['balanced_accuracy'], 2)
-    senss    = np.round(dict_results['sensitivity'], 2)
-    specs    = np.round(dict_results['specificity'], 2)
-    f1s      = np.round(dict_results['f1'], 2)
-    aucs     = np.round(dict_results['AUC'], 2)
-    accs     = np.round(dict_results['accuracy'], 2)
-    precs    = np.round(dict_results['precision'], 2)
-
-    # create a dict containg all models, params, and performances 
     models_results = [] 
-    for classifier, hyperparam, bal_acc, sens, spec, f1, auc, acc, prec in zip(models, hyperparams, bal_accs, senss, specs, f1s, aucs, accs, precs):
+    
+    if grid_search is not None:
+        classifiers = grid_search.cv_results_['params']
 
-        model_desc = get_model_description(classifier)
+        # get the models and hyperparameters
+        models = []
+        hyperparams = []
+        clf = None
+        for classif_dict in classifiers:
+            dict_params = {}
+            for key, value in classif_dict.items():
+                if key == 'classifier':
+                    clf = value    
+                else:
+                    # correct the param name
+                    new_key = key.replace('classifier__', '')
+                    dict_params[new_key] = value    
 
-        hyperparam = str(hyperparam).replace('\n', '').replace('             ','')
+            if clf is None:
+                clf = grid_search.estimator
 
-        # special config for the Balanced Bagging Classifier 
-        if classifier == 'BalancedBaggingClassifier':
-            hyperparam = "{'n_estimators':" + hyperparam.split(", 'n_estimators':")[1]
+            model = clf.__class__.__name__
+            params = str(dict_params)
 
+            models.append(model)
+            hyperparams.append(params)
+
+        # get the performances
+        dict_results = {}
+        for key, value in grid_search.cv_results_.items():
+            # get mean_test performances
+            if key.startswith('mean_test_'):
+                new_key = key.replace('mean_test_', '')
+                dict_results[new_key] = list(value)
+
+        bal_accs = np.round(dict_results['balanced_accuracy'], 2)
+        senss    = np.round(dict_results['sensitivity'], 2)
+        specs    = np.round(dict_results['specificity'], 2)
+        f1s      = np.round(dict_results['f1'], 2)
+        aucs     = np.round(dict_results['AUC'], 2)
+        accs     = np.round(dict_results['accuracy'], 2)
+        precs    = np.round(dict_results['precision'], 2)
+
+
+        # create a dict containg all models, params, and performances 
+        for classifier, hyperparam, bal_acc, sens, spec, f1, auc, acc, prec in zip(models, hyperparams, bal_accs, senss, specs, f1s, aucs, accs, precs):
+
+            model_desc = get_model_description(classifier)
+
+            hyperparam = str(hyperparam).replace('\n', '').replace('             ','')
+
+            # special config for the Balanced Bagging Classifier 
+            if classifier == 'BalancedBaggingClassifier':
+                hyperparam = "{'n_estimators':" + hyperparam.split(", 'n_estimators':")[1]
+
+            models_results.append({
+                'Dataset': dataset_info,
+                'Features': features_info,
+                'Model': model_desc,
+                'BalAcc': bal_acc,
+                'Sens': sens,
+                'Spec': spec,
+                'f1': f1,
+                'AUC': auc,
+                'Acc': acc,
+                'Prec': prec,
+                'Classifier': classifier,
+                'Hyperparams': hyperparam,
+            })
+        
+    elif performances is not None:
+        model_desc, classifier, hyperparam, bal_acc, sens, spec, auc, acc, prec, f1 = performances
+            
         models_results.append({
             'Dataset': dataset_info,
             'Features': features_info,
@@ -128,7 +158,9 @@ def get_grid_search_performances(grid_search,
             'Classifier': classifier,
             'Hyperparams': hyperparam,
         })
-    
+
+
+
     # create a dataFrame containg the results
     df_results = pd.DataFrame(models_results)
 
@@ -139,28 +171,14 @@ def get_grid_search_performances(grid_search,
 
 
 
-DEFAULT_SCORE = 'balanced_accuracy'
-def get_default_scoring():
-    # metrics to evaluate the model performance
-    scoring = {
-        'balanced_accuracy': make_scorer(balanced_accuracy_score),
-        'sensitivity': make_scorer(recall_score),
-        'specificity': make_scorer(recall_score, pos_label=0),
-        'f1': make_scorer(f1_score),
-        'AUC': 'roc_auc', #make_scorer(roc_auc_score, multi_class='ovr'),
-        'accuracy': make_scorer(accuracy_score),
-        'precision': make_scorer(precision_score, zero_division=0),
-    }
-    return scoring
-
-
 def exec_grid_search(param_grid, X, y, cv=None, 
                      n_jobs=N_JOBS, verbose=1, scoring=None, 
                      refit=None, return_train_score=False,
                      sort_results=True, dataset_info='', 
-                     features_info=''):
+                     features_info='', 
+                     X_valid=None, y_valid=None, plot_roc_curve=False):
 
-    pipeline = Pipeline(steps=[('classifier', GaussianNB() )])
+    # pipeline = Pipeline(steps=[('classifier', GaussianNB() )])
 
     if type(y) is pd.DataFrame:
         y = y[utils.CLASS_COLUMN].ravel()  
@@ -175,8 +193,14 @@ def exec_grid_search(param_grid, X, y, cv=None,
     if cv is None:
         cv = get_kfold_splits()
 
+    # get the estimator object (e.g., svm.SVC(), DecisionTreeClassifier()...)
+    estimator = param_grid[0]['classifier'][0]
+    # remove the estimator key from the grid_params dict
+    param_grid[0].pop('classifier')
+
+
     grid = GridSearchCV(
-        estimator=pipeline,
+        estimator=estimator, # pipeline,
         param_grid=param_grid, 
         scoring=scoring,
         cv=cv, 
@@ -195,11 +219,151 @@ def exec_grid_search(param_grid, X, y, cv=None,
         sort_results=sort_results,
     )
 
-    return grid, df_results
+
+    det_curve_data = []
+    precision_recall_curve_data = []
+    y_pred = None
+    y_pred_proba = None
+
+    if plot_roc_curve:
+        # get the best classifier
+        clf = grid.best_estimator_    
+
+        # fit using all training set
+        clf.fit(X, y)
+
+        # extract classifier name, hyperparams and a model "friendly name"
+        clf_instance = str(clf).replace('\n', '').replace(' ','').strip()
+        estimator_name = clf_instance.split('(')[0]
+        hyperparams = clf_instance.split('(')[1][:-1]
+        model_desc = get_model_description(estimator_name)
+
+        # make predictions using the best classifier
+        y_pred = clf.predict(X_valid)
+
+        # make predictions using probabilities, returning the class 
+        # probabilities for sample.
+        # The first column represents the probability of the 
+        # negative class (Non-Short) and the second column represents 
+        # the probability of the positive class (Short).
+        y_pred_proba = clf.predict_proba(X_valid)
+        y_pred_proba = y_pred_proba[:,1] # get short-survival probabilities
+
+
+        # get performance metrics based on predict and predict_proba
+        bal_acc, sens, spec, auc, acc, precision, f1 = get_scores_from_predict(
+            y_validation=y_valid,
+            y_pred=y_pred,
+            y_pred_proba=y_pred_proba,
+            print_info=False,
+        )
+
+        # get performances from the best classifier of the grid serach
+        df_results = get_grid_search_performances(
+            # grid_search=grid,
+            performances=[model_desc, estimator_name, hyperparams, bal_acc, sens, spec, auc, acc, precision, f1],
+            dataset_info=dataset_info,
+            features_info=features_info,
+            sort_results=sort_results,
+        )
 
 
 
-def create_models_NB_grid(param_grid=None, testing=False):
+        # =======================================================
+        # Detection Error Tradeoff (DET) curve
+        # =======================================================
+        fpr, fnr, thresholds = sk.metrics.det_curve(y_valid, y_pred_proba)
+        det_curve_data = [estimator_name, fpr, fnr, thresholds]
+        
+
+        # =======================================================
+        # Precision-Recall curve
+        # =======================================================
+        precision, recall, thresholds = sk.metrics.precision_recall_curve(y_valid, y_pred_proba)
+        au_prec_recall_curve = sk.metrics.auc(recall, precision)
+        precision_recall_curve_data = [estimator_name, precision, recall, thresholds]
+
+
+        # =======================================================
+        # ROC curve
+        # =======================================================
+        fpr, tpr, thresholds = sk.metrics.roc_curve(y_valid, y_pred_proba)
+        roc_auc = sk.metrics.auc(fpr, tpr)
+        roc_curve_data = [estimator_name, fpr, tpr, thresholds]
+
+
+        # =======================================================
+        # Predictions data (using predict and predict_proba)
+        # =======================================================
+        predictions_data = [estimator_name, y_pred, y_pred_proba]
+
+
+        # print some info
+        print(f'Classifier: {estimator_name}')
+        print(f'  Area under ROC: {roc_auc:.2f}; Area under Prec-Recall curve: {au_prec_recall_curve:.2f}')
+        print()
+
+
+
+    # return all information
+    return grid, df_results, det_curve_data, precision_recall_curve_data, roc_curve_data, predictions_data
+
+
+DEFAULT_SCORE = 'balanced_accuracy'
+def get_default_scoring():
+    # metrics to evaluate the model performance
+    scoring = {
+        'balanced_accuracy': make_scorer(balanced_accuracy_score),
+        'sensitivity': make_scorer(recall_score),
+        'specificity': make_scorer(recall_score, pos_label=0),
+        'f1': make_scorer(f1_score, zero_division=0.0),
+        #
+        'AUC': make_scorer(roc_auc_score),
+        'accuracy': make_scorer(accuracy_score),
+        'precision': make_scorer(precision_score, zero_division=0),
+    }
+    return scoring
+
+
+def create_models_SVM_grid(param_grid=None, testing=False):
+    # hyperparams
+    kernels = ['rbf', 'linear'] #, 'poly', 'sigmoid',]
+    gammas = ['scale', 'auto',]
+    
+    # class_weights = [None, 'balanced',]
+    class_weights = ['balanced',]
+
+    Cs = [0.1, 0.3, 0.5, 0.7, 1, 3, 5, 10] #, 100, 200, 1000, 1500, 1700, 2000]
+
+    if testing:
+        kernels = ['rbf', 'linear'] #, 'poly', 'sigmoid',]
+        gammas = ['auto',]
+        class_weights = ['balanced']
+        Cs = [0.1, 0.3, ]
+
+
+    if param_grid is None:
+        param_grid = []
+
+    param_grid.append(
+        {
+            "classifier__C": Cs,
+            "classifier__kernel": kernels,
+            "classifier__gamma": gammas,
+            "classifier__class_weight": class_weights,
+            "classifier__probability": [True],
+            "classifier__random_state": [RANDOM_STATE],
+            "classifier": [svm.SVC()]
+        }
+    )    
+
+    return param_grid
+
+
+
+
+
+def create_models_NB_grid(param_grid=None, testing=False, only_ComplementNB=False, only_GaussianNB=False):
     # hyperparams
     alphas = [0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
     norms = [False, True]
@@ -212,29 +376,91 @@ def create_models_NB_grid(param_grid=None, testing=False):
     if param_grid is None:
         param_grid = []
 
-    param_grid.append(
-        {
-            "classifier__alpha": alphas,
-            "classifier__norm": norms,
-            "classifier": [ComplementNB()]
-        }
-    )    
+    if not only_GaussianNB:
+        param_grid.append(
+            {
+                "classifier__alpha": alphas,
+                "classifier__norm": norms,
+                "classifier": [ComplementNB()]
+            }
+        )    
 
-    param_grid.append(
-        {
-            "classifier": [GaussianNB()]
-        }
-    )    
+    if not only_ComplementNB:
+        param_grid.append(
+            {
+                "classifier": [GaussianNB()]
+            }
+        )    
 
     return param_grid
 
 
 
+def set_grid_params_alone(param_grid):
+    keys = list(param_grid[0].keys())
+    for key in keys:
+        if key.startswith('classifier__'): 
+            new_key = key.replace('classifier__', '')
+            param_grid[0][new_key] = param_grid[0][key]
+            param_grid[0].pop(key)
+
+
+
+#     utils_exec_models.create_models_NN_grid(qty_features=X_train.shape[1], testing=TESTING),
+
+def create_models_NN_grid_alone(qty_features, testing=False):
+    param_grid = create_models_NN_grid(qty_features=qty_features, testing=testing)    
+    set_grid_params_alone(param_grid)
+    return param_grid
+
+
+def create_models_GaussianNB_grid_alone(testing=False):
+    param_grid = create_models_NB_grid(testing=testing, only_GaussianNB=True)    
+    set_grid_params_alone(param_grid)
+    return param_grid
+
+def create_models_ComplementNB_grid_alone(testing=False):
+    param_grid = create_models_NB_grid(testing=testing, only_ComplementNB=True)    
+    set_grid_params_alone(param_grid)
+    return param_grid
+
+def create_models_RF_grid_alone(testing=False):
+    param_grid = create_models_RF_grid(testing=testing)    
+    set_grid_params_alone(param_grid)
+    return param_grid
+
+
+def create_models_kNN_grid_alone(testing=False):
+    param_grid = create_models_kNN_grid(testing=testing, only_kNN=True)    
+    set_grid_params_alone(param_grid)
+    return param_grid
+
+def create_models_Radius_kNN_grid_alone(testing=False):
+    param_grid = create_models_kNN_grid(testing=testing, only_Radius=True)    
+    set_grid_params_alone(param_grid)
+    return param_grid
+
+
+def create_models_SVM_grid_alone(testing=False):
+    param_grid = create_models_SVM_grid(testing=testing)    
+    set_grid_params_alone(param_grid)
+    return param_grid
+
+
+def create_models_DT_grid_alone(testing=False):
+    param_grid = create_models_DT_grid(testing=testing)    
+    set_grid_params_alone(param_grid)
+    return param_grid
+
+
+
+
 def create_models_DT_grid(param_grid=None, testing=False):
     # hyperparams
-    max_depths = [3, 4, 5, 7, 9, 10, 15, 25, 50]
+    max_depths = [3, 4, 5, 7, 9, 10, 15, 25] #, 50]
     criterions = ['gini', 'entropy'] #, 'log_loss'] LOG-LOSS DOESN'T WORK
     class_weights = [None, 'balanced']
+    class_weights = ['balanced']
 
 
     if testing:
@@ -262,10 +488,11 @@ def create_models_DT_grid(param_grid=None, testing=False):
 
 def create_models_RF_grid(param_grid=None, testing=False):
     # hyperparams
-    max_depths = [10, 15, 25, 50]
-    num_estimators = [50, 75, 100, 200] 
+    max_depths = [5, 7, 10, 15] #, 25, 50]
+    num_estimators = [11, 15, 21, 51] #, 75, 100, 200] 
     criterions = ['gini', 'entropy'] 
-    class_weights = [None, 'balanced', 'balanced_subsample']
+    # class_weights = [None, 'balanced', 'balanced_subsample']
+    class_weights = ['balanced']
 
 
     if testing:
@@ -341,7 +568,9 @@ def create_models_NN_grid(qty_features, param_grid=None, testing=False):
 
 
 
-def create_models_kNN_grid(param_grid=None, testing=False):
+
+
+def create_models_kNN_grid(param_grid=None, testing=False, only_kNN=False, only_Radius=False):
     # hyperparams
     weights = ['uniform', 'distance']
     distance_metrics = [
@@ -371,60 +600,30 @@ def create_models_kNN_grid(param_grid=None, testing=False):
     if param_grid is None:
         param_grid = []
 
-    # k-NN
-    param_grid.append(
-        {
-            "classifier__n_neighbors": ks,
-            "classifier__weights": weights,
-            "classifier__metric": distance_metrics,
-            "classifier": [KNeighborsClassifier()]
-        }
-    )    
+    if not only_Radius:
+        # k-NN
+        param_grid.append(
+            {
+                "classifier__n_neighbors": ks,
+                "classifier__weights": weights,
+                "classifier__metric": distance_metrics,
+                "classifier": [KNeighborsClassifier()]
+            }
+        )    
 
-    # Radius-NN
-    param_grid.append(
-        {
-            "classifier__radius": radius_set,
-            "classifier__weights": weights,
-            "classifier__leaf_size": leaf_sizes,
-            "classifier__outlier_label": outlier_labels,
-            "classifier__metric": distance_metrics,
-            "classifier": [RadiusNeighborsClassifier()]
-        }
-    )    
+    if not only_kNN:
+        # Radius-NN
+        param_grid.append(
+            {
+                "classifier__radius": radius_set,
+                "classifier__weights": weights,
+                "classifier__leaf_size": leaf_sizes,
+                "classifier__outlier_label": outlier_labels,
+                "classifier__metric": distance_metrics,
+                "classifier": [RadiusNeighborsClassifier()]
+            }
+        )    
 
-
-    return param_grid
-
-
-def create_models_SVM_grid(param_grid=None, testing=False):
-    # hyperparams
-    kernels = ['rbf', 'linear'] #, 'poly', 'sigmoid',]
-    gammas = ['scale', 'auto',]
-    class_weights = [None, 'balanced',]
-    Cs = [0.1, 0.3, 0.5, 0.7, 1, 3, 5, 10, 100, 200, 1000, 1500, 1700, 2000]
-
-    if testing:
-        kernels = ['rbf', 'linear'] #, 'poly', 'sigmoid',]
-        gammas = ['auto',]
-        class_weights = [None]
-        Cs = [0.1, 0.3, ]
-
-
-    if param_grid is None:
-        param_grid = []
-
-    param_grid.append(
-        {
-            "classifier__C": Cs,
-            "classifier__kernel": kernels,
-            "classifier__gamma": gammas,
-            "classifier__class_weight": class_weights,
-            "classifier__probability": [True],
-            "classifier__random_state": [RANDOM_STATE],
-            "classifier": [svm.SVC()]
-        }
-    )    
 
     return param_grid
 
@@ -880,7 +1079,7 @@ def create_model_from_string(model, hyperparams, estimator_model=None, estimator
 
 
 
-def get_scores_from_predict(y_validation, y_pred=None, fitted_model=None, X_validation=None, print_info=False):
+def get_scores_from_predict(y_validation, y_pred=None, y_pred_proba=None, fitted_model=None, X_validation=None, print_info=False):
     # call predict method
     if fitted_model is not None:
         y_pred = fitted_model.predict(X_validation)
@@ -891,7 +1090,11 @@ def get_scores_from_predict(y_validation, y_pred=None, fitted_model=None, X_vali
     f1      = np.round(f1_score(y_validation, y_pred), 2)
     acc     = np.round(accuracy_score(y_validation, y_pred), 2)
     precision    = np.round(precision_score(y_validation, y_pred), 2)
-    auc     = np.round(roc_auc_score(y_validation, y_pred, multi_class='ovr'), 2)
+
+    if y_pred_proba is None:
+        auc     = np.round(roc_auc_score(y_validation, y_pred, multi_class='ovr'), 2)
+    else:
+        auc     = np.round(roc_auc_score(y_validation, y_pred_proba), 2)
 
     if print_info:
         print(f'BalAcc: {bal_acc:>4.2f}      f1  : {f1:.2f}')
@@ -905,6 +1108,33 @@ def get_scores_from_predict(y_validation, y_pred=None, fitted_model=None, X_vali
     else:
         return bal_acc, sens, spec, auc, acc, precision, f1
 
+
+def get_scores_from_predict_proba(y_validation, y_pred=None, fitted_model=None, X_validation=None, print_info=False):
+    # call predict method
+    if fitted_model is not None:
+        y_pred = fitted_model.predict_proba(X_validation)
+    # calculate the scores
+    # bal_acc = np.round(balanced_accuracy_score(y_validation, y_pred), 2)
+    # sens    = np.round(recall_score(y_validation, y_pred), 2)
+    # spec    = np.round(recall_score(y_validation, y_pred, pos_label=0), 2)
+    # f1      = np.round(f1_score(y_validation, y_pred), 2)
+    # acc     = np.round(accuracy_score(y_validation, y_pred), 2)
+    # precision    = np.round(precision_score(y_validation, y_pred), 2)
+    auc     = np.round(roc_auc_score(y_validation, y_pred, multi_class='ovr'), 2)
+
+    if print_info:
+        # print(f'BalAcc: {bal_acc:>4.2f}      f1  : {f1:.2f}')
+        # print(f'Sens  : {sens:>4.2f}      Acc : {acc:.2f}')
+        # print(f'Spec  : {spec:>4.2f}      Prec: {precision:.2f}')
+        print(f'                  AUC : {auc:.2f}')
+
+    return auc
+
+    # #
+    # if fitted_model is not None:
+    #     return bal_acc, sens, spec, auc, acc, precision, f1, y_pred
+    # else:
+    #     return bal_acc, sens, spec, auc, acc, precision, f1
 
 
 
