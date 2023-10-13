@@ -48,16 +48,12 @@ For those wanting to try it out, this is what you need:
 ---
 
 5) Perform the Machine Learning (ML) pipeline:
-    - Open and execute, in order, all code (`*.ipynb`) in the `05_Train_Validate_Models` folder
-    - These steps will:
+    - Execute the python program ```exec_grid_search_both_scenarios.py``` in the `05_Train_Validate_Models` folder
+    - This program will:
         - Split the dataset into _Training_ and _Validation_ subsets 
         - Train and validate the ML models for both scenarios (_Single-Model_ and _Ensemble-Imbalance_)
-           - NOTE: It can take a long time to accomplish (even days) because more than 30,000 models will be executed.
+           - NOTE: It can take a long time to accomplish (even days).
         - Save the performance results into CSV files in the `05_Train_Validate_Models/exec_results` folder
-           - Result CSV files:
-              - ```results_Ensemble_Imbalance.csv```: training performances for the _Ensemble-Imbalance_ scenario.
-              - ```results_Single_Model.csv```: training performances for the _Single-Model_ scenario.
-              - ```validation_results.csv```: validation performances for the both scenarios.
              
     - Pipeline Overview:
       
@@ -108,7 +104,7 @@ For those wanting to try it out, this is what you need:
 
 9) Additional Information:
 
-   [PDF](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/files/12899208/additional_info.pdf)
+   [Exploratory Data Analysis](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/files/12899208/additional_info.pdf)
 
 
 ---
