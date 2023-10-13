@@ -4,15 +4,14 @@
 This code uses ensemble and imbalance learning approaches to improve identifying short-survival amyotrophic lateral sclerosis patients at diagnosis time. Furthermore, we utilized the SHAP framework to explain how the best model performed the patient classifications.  
 The results of this work have been published in the research article "Ensemble-Imbalance-based classification for amyotrophic lateral sclerosis prognostic prediction: identifying short-survival patients at diagnosis" (Papaiz et al., 2023).
 
-### Supplementary Material: ([PDF](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/files/12114348/supplementary_info.pdf))
-
+### Supplementary Material: ([PDF](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/files/12898644/supplementary_info.pdf))
 
 ---
 
 
 **If you use this code for your research please cite this paper:**
 
-> Papaiz F, Dourado MET, Valentim RAdM, de Morais AHF, Arrais JP. Ensemble-Imbalance-based classification for amyotrophic lateral sclerosis prognostic prediction: identifying short-survival patients at diagnosis. 2023.
+> Papaiz F, Dourado MET, Valentim RAdM, Pinto R, de Morais AHF, Arrais JP. Ensemble-Imbalance-based classification for amyotrophic lateral sclerosis prognostic prediction: identifying short-survival patients at diagnosis. 2023.
    
 [LICENSE](LICENSE)
 
@@ -55,11 +54,17 @@ For those wanting to try it out, this is what you need:
               - ```validation_results.csv```: validation performances for the both scenarios.
              
     - Pipeline Overview:
-       ![ml_pipeline](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/assets/16102250/c7188c16-56a8-4dc3-acf2-ac8d5b94f406)
+      
+      ![ml_pipeline](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/assets/16102250/2509f990-79ed-4009-8409-d037c5dbd46d)
+
+
 
 
     - Validation performance obtained by each scenario and algorithm:
-      ![performances_both_scenarios](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/assets/16102250/78fa083d-cc95-437e-8d8a-301acc434417)
+      
+      ![performances_both_scenarios_barplot](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/assets/16102250/fc10a69f-e7f5-4a96-a0dd-f88e9d852059)
+
+
 
 
 
@@ -71,12 +76,29 @@ For those wanting to try it out, this is what you need:
         - ```shap_values = explainer.shap_values(X_valid)```
     - Analyze the SHAP results by plotting SHAP graphs. See the examples below:
         - Decision plot:
-          ![decision](https://github.com/fabianopapaiz/als_prognosis_using_ensemble_imbalance/assets/16102250/20e96b52-d954-49ee-acec-4d87994a6fea)
+          
+          ![patient_B_decision_plot](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/assets/16102250/764dc32a-d273-4c1c-aa1a-ed73ba4994ed)
+
+        
         - Summary plot: (Bar and Dotted plots)
-          ![summary](https://github.com/fabianopapaiz/als_prognosis_using_ensemble_imbalance/assets/16102250/655212cd-23d0-464d-bc72-d4e4c1484120)
+          
+          ![SHAP_0_Feature_Importance_and_Beeswarm](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/assets/16102250/f10efead-d5e8-4455-b1ac-0527e51b2456)
+
+
+7) Grid-Search hyperparameters used for each algorithm.
+
+![grid-search-params](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/assets/16102250/8ed50d34-ff82-43c7-8364-b51d9ffbff8b)
+
+
+
+
+8) Best models' hyperparameters
+
+![best-model-params](https://github.com/fabianopapaiz/ensemble_imbalance_model_for_als_prognosis/assets/16102250/2d00db54-ddd3-4001-9193-15fa1ac12ca5)
+
 
 
 ---
-Finally, please let us know if you have any comments or suggestions, or if you have questions about the code or the procedure (correspondence e-mail: `fabianopapaiz at gmail.com`). 
+Finally, please let us know if you have any comments or suggestions, or if you have questions about the code or the procedure (correspondence e-mail: `fabianopapaiz at gmail dot com`). 
 
 
